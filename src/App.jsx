@@ -7,6 +7,7 @@ import { obtenerLugares } from './services/lugares'
 import { construirRutaTP } from './services/transporte'
 import useLocation from './hooks/useLocation'
 import { guardarRuta } from './services/rutasGuardadas'
+import {guardarRuta,obtenerRutas} from './services/rutasGuardadas'
 
 async function fetchRutaOSRM(paradas, modo) {
   const perfil = modo === 'car' ? 'car' : 'foot'
@@ -25,6 +26,8 @@ async function fetchRutaOSRM(paradas, modo) {
 
 export default function App() {
   const userLocation = useLocation()
+
+  const [rutasGuardadas, setRutasGuardadas] = useState([])
 
   const [allLugares, setAllLugares]     = useState(fallbackLugares)
   const [categoriasActivas, setCategoriasActivas] = useState(Object.keys(CATEGORIAS))
@@ -45,6 +48,11 @@ export default function App() {
 
   // Mobile panel state: 'collapsed' | 'half' | 'full'
   const [panelState, setPanelState] = useState('half')
+
+  useEffect(() => {
+  const rutas = obtenerRutas()
+  setRutasGuardadas(rutas)
+}, [])
 
   useEffect(() => {
     async function cargarLugares() {
@@ -148,7 +156,7 @@ export default function App() {
     setRuta(null); setRutaGeom(null); setRutaSegmentos(null); setRutaInfo(null)
     setLugarActivo(null); setLugaresSeleccionados([])
   }
-  
+
   function guardarRutaActual() {
 
         if (!ruta) return
@@ -166,8 +174,31 @@ export default function App() {
         modoTransporte
       })
 
+      setRutasGuardadas(
+        obtenerRutas()
+      )
+
       alert('Ruta guardada correctamente')
     }
+
+    async function abrirRutaGuardada(rutaGuardada) {
+
+      setRuta({
+      ruta: rutaGuardada.ruta,
+      resumen: rutaGuardada.resumen
+      })
+
+    setRutaInfo(
+      rutaGuardada.rutaInfo || null
+    )
+
+    setLugarActivo(null)
+
+    calcularGeometria(
+      rutaGuardada.ruta,
+      rutaGuardada.modoTransporte || modoTransporte
+    )
+  }
 
   // Panel height map for mobile
   const panelHeights = {
@@ -196,7 +227,9 @@ export default function App() {
     onLimpiarRuta: limpiarRuta,
     cargandoRuta, error,
     lugaresFiltrados,
-    guardarRutaActual
+    guardarRutaActual,
+    rutasGuardadas,
+    abrirRutaGuardada,
   }
 
   return (

@@ -12,6 +12,8 @@ export default function Sidebar({
   onGenerarRuta, onLimpiarRuta,
   cargandoRuta, error, lugaresFiltrados,
   guardarRutaActual,
+  rutasGuardadas,
+  abrirRutaGuardada,
   mobile = false,
   hideCta = false,
 }) {
@@ -303,7 +305,29 @@ export default function Sidebar({
           >
           💾 Guardar Ruta
           </button>
+          {rutasGuardadas?.length > 0 && (
+            <div className="mt-4">
 
+            <h3 className="font-bold text-sm mb-2">
+              📂 Rutas Guardadas
+            </h3>
+
+            <div className="space-y-2">
+
+          {rutasGuardadas.map(r => (
+            <button
+              key={r.id}
+              onClick={() => abrirRutaGuardada(r)}
+              className="w-full text-left p-2 border rounded-lg hover:bg-gray-50"
+            >
+            📍 {r.nombre}
+            </button>
+          ))}
+
+        </div>
+
+      </div>
+    )}
           <button
             onClick={onLimpiarRuta}
             className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition"
