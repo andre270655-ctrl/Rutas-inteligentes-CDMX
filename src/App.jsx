@@ -149,8 +149,8 @@ export default function App() {
 
   // Panel height map for mobile
   const panelHeights = {
-    collapsed: '90px',
-    half: '52vh',
+    collapsed: '140px',
+    half: '60vh',
     full: '92vh',
   }
 
@@ -241,7 +241,14 @@ export default function App() {
           </button>
 
           {/* Botón FIJO al fondo - posición absoluta dentro del panel */}
-          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-white border-t z-10">
+          <div className="fixed bottom-4 left-4 right-4 z-[9999] md:hidden">
+            <button
+              onClick={generarRuta}
+              className="w-full py-4 rounded-xl bg-blue-600 text-white font-semibold shadow-xl"
+            >
+              🗺 Generar Ruta
+            </button>
+          </div>
             {ruta ? (
               <button onClick={limpiarRuta}
                 className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
