@@ -82,26 +82,6 @@ export default function App() {
         setRutaGeom(puntosConOrigen.map(p => [p.lat, p.lng]))
       }
 
-      function guardarRutaActual() {
-
-        if (!ruta) return
-
-        const nombre = prompt(
-          'Nombre para esta ruta'
-        )
-
-      if (!nombre) return
-
-      guardarRuta(nombre, {
-        ruta: ruta.ruta,
-        resumen: ruta.resumen,
-        rutaInfo,
-        modoTransporte
-      })
-
-      alert('Ruta guardada correctamente')
-    }
-
       return
     }
 
@@ -168,6 +148,26 @@ export default function App() {
     setRuta(null); setRutaGeom(null); setRutaSegmentos(null); setRutaInfo(null)
     setLugarActivo(null); setLugaresSeleccionados([])
   }
+  
+  function guardarRutaActual() {
+
+        if (!ruta) return
+
+        const nombre = prompt(
+          'Nombre para esta ruta'
+        )
+
+      if (!nombre) return
+
+      guardarRuta(nombre, {
+        ruta: ruta.ruta,
+        resumen: ruta.resumen,
+        rutaInfo,
+        modoTransporte
+      })
+
+      alert('Ruta guardada correctamente')
+    }
 
   // Panel height map for mobile
   const panelHeights = {
@@ -196,7 +196,7 @@ export default function App() {
     onLimpiarRuta: limpiarRuta,
     cargandoRuta, error,
     lugaresFiltrados,
-    guardarRutaActual,
+    guardarRutaActual
   }
 
   return (
