@@ -250,9 +250,30 @@ export default function App() {
           {/* Sidebar content inside the panel (only when not collapsed) */}
           {panelState !== 'collapsed' && (
             <div className="flex-1 overflow-hidden flex flex-col">
-              <Sidebar {...sidebarProps} mobile />
+              <Sidebar {...sidebarProps} mobile hideCta />
             </div>
           )}
+
+          {/* CTA siempre visible en móvil */}
+          <div className="px-4 pb-4 pt-2 flex-shrink-0">
+            {ruta ? (
+              <button onClick={limpiarRuta}
+                className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
+                ✕ Nueva búsqueda
+              </button>
+            ) : (
+              <button
+                onClick={generarRuta}
+                disabled={cargandoRuta || (modoRuta === 'auto' ? categoriasActivas.length === 0 : lugaresSeleccionados.length < 2)}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                {cargandoRuta
+                  ? <><span className="animate-spin">⏳</span> Calculando…</>
+                  : modoRuta === 'manual'
+                    ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
+                    : '🗺 Generar Ruta'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

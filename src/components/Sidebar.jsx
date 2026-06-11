@@ -12,6 +12,7 @@ export default function Sidebar({
   onGenerarRuta, onLimpiarRuta,
   cargandoRuta, error, lugaresFiltrados,
   mobile = false,
+  hideCta = false,
 }) {
   function toggleCategoria(cat) {
     setCategoriasActivas(prev =>
@@ -290,6 +291,7 @@ export default function Sidebar({
       </div>
 
       {/* ── CTA ── */}
+      {!hideCta && (
       <div className="p-4 border-t bg-white flex-shrink-0">
         {ruta ? (
           <button onClick={onLimpiarRuta}
@@ -307,6 +309,7 @@ export default function Sidebar({
           </button>
         )}
       </div>
+      )}
     </aside>
   )
 }
