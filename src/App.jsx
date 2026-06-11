@@ -231,47 +231,43 @@ export default function App() {
           className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[1000] transition-all duration-300 ease-in-out"
           style={{ height: panelHeights[panelState] }}
         >
-          {/* Estructura: drag handle + contenido scrolleable + botón fijo abajo */}
-          <div className="h-full flex flex-col">
+          {/* Drag handle */}
+          <button
+            onClick={cyclePanelState}
+            className="flex justify-center pt-2 pb-1 w-full"
+            aria-label="Expandir o colapsar panel"
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          </button>
 
-            {/* Drag handle */}
-            <button
-              onClick={cyclePanelState}
-              className="flex justify-center pt-2 pb-1 w-full flex-shrink-0"
-              aria-label="Expandir o colapsar panel"
-            >
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
-            </button>
-
-            {/* Contenido scrolleable - solo cuando no está colapsado */}
-            {panelState !== 'collapsed' && (
-              <div className="flex-1 overflow-y-auto">
-                <Sidebar {...sidebarProps} mobile hideCta />
-              </div>
+          {/* Botón FIJO al fondo - posición absoluta dentro del panel */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-white border-t z-10">
+            {ruta ? (
+              <button onClick={limpiarRuta}
+                className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
+                ✕ Nueva búsqueda
+              </button>
+            ) : (
+              <button
+                onClick={generarRuta}
+                disabled={cargandoRuta || (modoRuta === 'auto' ? categoriasActivas.length === 0 : lugaresSeleccionados.length < 2)}
+                className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                {cargandoRuta
+                  ? <><span className="animate-spin">⏳</span> Calculando…</>
+                  : modoRuta === 'manual'
+                    ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
+                    : '🗺 Generar Ruta'}
+              </button>
             )}
-
-            {/* Botón SIEMPRE visible al fondo */}
-            <div className="px-4 py-3 flex-shrink-0 border-t bg-white">
-              {ruta ? (
-                <button onClick={limpiarRuta}
-                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
-                  ✕ Nueva búsqueda
-                </button>
-              ) : (
-                <button
-                  onClick={generarRuta}
-                  disabled={cargandoRuta || (modoRuta === 'auto' ? categoriasActivas.length === 0 : lugaresSeleccionados.length < 2)}
-                  className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
-                  {cargandoRuta
-                    ? <><span className="animate-spin">⏳</span> Calculando…</>
-                    : modoRuta === 'manual'
-                      ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
-                      : '🗺 Generar Ruta'}
-                </button>
-              )}
-            </div>
-
           </div>
+
+          {/* Contenido scrolleable con padding inferior para no tapar el botón */}
+          {panelState !== 'collapsed' && (
+            <div className="overflow-y-auto" style={{ height: 'calc(100% - 32px - 72px)' }}>
+              <Sidebar {...sidebarProps} mobile hideCta />
+            </div>
+          )}
+
         </div>
       </div>
     </div>
