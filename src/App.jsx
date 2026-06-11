@@ -149,7 +149,7 @@ export default function App() {
 
   // Panel height map for mobile
   const panelHeights = {
-    collapsed: '60px',
+    collapsed: '80px',
     half: '52vh',
     full: '92vh',
   }
@@ -238,13 +238,6 @@ export default function App() {
             aria-label="Expandir o colapsar panel"
           >
             <div className="w-10 h-1 bg-gray-300 rounded-full" />
-            {panelState === 'collapsed' && (
-              <div className="flex items-center gap-2 mt-1 text-sm font-medium text-blue-600">
-                <span>🗺</span>
-                <span>{ruta ? `Ruta: ${ruta.resumen.lugares} lugares` : 'Planear ruta'}</span>
-                <span className="text-gray-400">↑</span>
-              </div>
-            )}
           </button>
 
           {/* Sidebar content inside the panel (only when not collapsed) */}
@@ -254,8 +247,8 @@ export default function App() {
             </div>
           )}
 
-          {/* CTA siempre visible en móvil */}
-          <div className="px-4 pb-4 pt-2 flex-shrink-0">
+          {/* CTA siempre visible en móvil - incluso colapsado */}
+          <div className="px-4 pb-3 pt-1 flex-shrink-0">
             {ruta ? (
               <button onClick={limpiarRuta}
                 className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
