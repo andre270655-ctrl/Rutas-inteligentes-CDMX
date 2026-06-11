@@ -6,6 +6,7 @@ import { TIPOS_TRANSPORTE, COSTOS_TRANSPORTE } from './data/transporte'
 import { obtenerLugares } from './services/lugares'
 import { construirRutaTP } from './services/transporte'
 import useLocation from './hooks/useLocation'
+import { guardarRuta } from './services/rutasGuardadas'
 
 async function fetchRutaOSRM(paradas, modo) {
   const perfil = modo === 'car' ? 'car' : 'foot'
@@ -80,6 +81,27 @@ export default function App() {
         setRutaSegmentos(null)
         setRutaGeom(puntosConOrigen.map(p => [p.lat, p.lng]))
       }
+
+      function guardarRutaActual() {
+
+        if (!ruta) return
+
+        const nombre = prompt(
+          'Nombre para esta ruta'
+        )
+
+      if (!nombre) return
+
+      guardarRuta(nombre, {
+        ruta: ruta.ruta,
+        resumen: ruta.resumen,
+        rutaInfo,
+        modoTransporte
+      })
+
+      alert('Ruta guardada correctamente')
+    }
+
       return
     }
 
@@ -174,6 +196,7 @@ export default function App() {
     onLimpiarRuta: limpiarRuta,
     cargandoRuta, error,
     lugaresFiltrados,
+    guardarRutaActual,
   }
 
   return (

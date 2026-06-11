@@ -11,6 +11,7 @@ export default function Sidebar({
   lugarActivo, setLugarActivo,
   onGenerarRuta, onLimpiarRuta,
   cargandoRuta, error, lugaresFiltrados,
+  guardarRutaActual,
   mobile = false,
   hideCta = false,
 }) {
@@ -294,20 +295,36 @@ export default function Sidebar({
       {!hideCta && (
       <div className="p-4 border-t bg-white flex-shrink-0">
         {ruta ? (
-          <button onClick={onLimpiarRuta}
-            className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
-            ✕ Nueva búsqueda
+          <div className="space-y-2">
+
+          <button
+            onClick={guardarRutaActual}
+            className="w-full py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
+          >
+          💾 Guardar Ruta
           </button>
+
+          <button
+            onClick={onLimpiarRuta}
+            className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition"
+          >
+          ✕ Nueva búsqueda
+          </button>
+
+          </div>
         ) : (
-          <button onClick={onGenerarRuta} disabled={cargandoRuta || !puedeGenerar}
-            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
-            {cargandoRuta
-              ? <><span className="animate-spin">⏳</span> Calculando…</>
-              : modoRuta === 'manual'
-                ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
-                : '🗺 Generar Ruta'}
-          </button>
-        )}
+        <button
+          onClick={onGenerarRuta}
+          disabled={cargandoRuta || !puedeGenerar}
+          className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+        >
+        {cargandoRuta
+        ? <><span className="animate-spin">⏳</span> Calculando…</>
+        : modoRuta === 'manual'
+        ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
+        : '🗺 Generar Ruta'}
+        </button>
+      )}
       </div>
       )}
     </aside>
