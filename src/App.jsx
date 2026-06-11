@@ -35,12 +35,15 @@ export default function App() {
 
   const [ruta, setRuta]             = useState(null)
   const [rutaGeom, setRutaGeom]     = useState(null)
-  const [rutaSegmentos, setRutaSegmentos] = useState(null) // para transporte público
+  const [rutaSegmentos, setRutaSegmentos] = useState(null)
   const [rutaInfo, setRutaInfo]     = useState(null)
   const [cargandoRuta, setCargandoRuta] = useState(false)
   const [error, setError]           = useState(null)
   const [lugarActivo, setLugarActivo] = useState(null)
   const [supabaseVivo, setSupabaseVivo] = useState(false)
+
+  // Mobile panel state: 'collapsed' | 'half' | 'full'
+  const [panelState, setPanelState] = useState('half')
 
   useEffect(() => {
     async function cargarLugares() {
@@ -57,7 +60,6 @@ export default function App() {
     cargarLugares()
   }, [])
 
-  // Recalcular al cambiar modo de transporte
   useEffect(() => {
     if (ruta?.ruta?.length > 1) calcularGeometria(ruta.ruta, modoTransporte)
   }, [modoTransporte])
@@ -68,7 +70,6 @@ export default function App() {
       ? [{ lat: userLocation.lat, lng: userLocation.lng }, ...paradasRuta]
       : paradasRuta
 
-    // Transporte público simulado
     if (tipo?.estaciones?.length > 0) {
       try {
         const resultado = await construirRutaTP(puntosConOrigen, tipo.estaciones)
@@ -82,7 +83,6 @@ export default function App() {
       return
     }
 
-    // A pie / coche (OSRM)
     setRutaSegmentos(null)
     try {
       const { geom, distanciaKm, duracionMin } = await fetchRutaOSRM(puntosConOrigen, modo)
@@ -133,6 +133,8 @@ export default function App() {
       }
       setRuta(nuevaRuta)
       await calcularGeometria(rutaLocal, modoTransporte)
+      // When route is generated on mobile, expand the panel to show results
+      setPanelState('half')
     } catch (e) {
       setError(e.message || 'Error al generar la ruta.')
     } finally {
@@ -145,38 +147,55 @@ export default function App() {
     setLugarActivo(null); setLugaresSeleccionados([])
   }
 
+  // Panel height map for mobile
+  const panelHeights = {
+    collapsed: '60px',
+    half: '52vh',
+    full: '92vh',
+  }
+
+  function cyclePanelState() {
+    setPanelState(prev =>
+      prev === 'collapsed' ? 'half' : prev === 'half' ? 'full' : 'collapsed'
+    )
+  }
+
+  const sidebarProps = {
+    categorias: CATEGORIAS,
+    categoriasActivas, setCategoriasActivas,
+    horas, setHoras,
+    presupuesto, setPresupuesto,
+    modoTransporte, setModoTransporte,
+    modoRuta, setModoRuta,
+    lugaresSeleccionados, toggleSeleccion,
+    ruta, rutaInfo, rutaSegmentos,
+    lugarActivo, setLugarActivo,
+    onGenerarRuta: generarRuta,
+    onLimpiarRuta: limpiarRuta,
+    cargandoRuta, error,
+    lugaresFiltrados,
+  }
+
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-6 py-3 shadow-lg flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🚇</span>
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-blue-700 to-blue-500 text-white px-4 py-2 shadow-lg flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🚇</span>
           <div>
-            <h1 className="text-xl font-bold leading-tight">CDMX Smart Route</h1>
-            <p className="text-blue-200 text-xs">Rutas inteligentes por la ciudad</p>
+            <h1 className="text-base font-bold leading-tight">CDMX Smart Route</h1>
+            <p className="text-blue-200 text-xs hidden sm:block">Rutas inteligentes por la ciudad</p>
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className={`w-2 h-2 rounded-full ${supabaseVivo ? 'bg-green-400' : 'bg-yellow-400'}`} />
-          <span className="text-blue-100">{supabaseVivo ? 'Supabase conectado' : 'Sin conexión'}</span>
+          <span className="text-blue-100 hidden sm:block">{supabaseVivo ? 'Conectado' : 'Sin conexión'}</span>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          categorias={CATEGORIAS}
-          categoriasActivas={categoriasActivas}
-          setCategoriasActivas={setCategoriasActivas}
-          horas={horas} setHoras={setHoras}
-          presupuesto={presupuesto} setPresupuesto={setPresupuesto}
-          modoTransporte={modoTransporte} setModoTransporte={setModoTransporte}
-          modoRuta={modoRuta} setModoRuta={setModoRuta}
-          lugaresSeleccionados={lugaresSeleccionados} toggleSeleccion={toggleSeleccion}
-          ruta={ruta} rutaInfo={rutaInfo} rutaSegmentos={rutaSegmentos}
-          lugarActivo={lugarActivo} setLugarActivo={setLugarActivo}
-          onGenerarRuta={generarRuta} onLimpiarRuta={limpiarRuta}
-          cargandoRuta={cargandoRuta} error={error}
-          lugaresFiltrados={lugaresFiltrados}
-        />
+      {/* ── DESKTOP layout (md+) ── */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
+        <Sidebar {...sidebarProps} />
         <main className="flex-1 relative">
           <MapView
             lugares={lugaresParaMostrar}
@@ -190,6 +209,52 @@ export default function App() {
           />
         </main>
       </div>
+
+      {/* ── MOBILE layout ── */}
+      <div className="flex md:hidden flex-1 relative overflow-hidden">
+        {/* Map fills the screen */}
+        <div className="absolute inset-0">
+          <MapView
+            lugares={lugaresParaMostrar}
+            categorias={CATEGORIAS}
+            ruta={ruta} rutaGeom={rutaGeom} rutaSegmentos={rutaSegmentos}
+            modoTransporte={modoTransporte}
+            lugarActivo={lugarActivo} setLugarActivo={setLugarActivo}
+            userLocation={userLocation}
+            modoRuta={modoRuta}
+            lugaresSeleccionados={lugaresSeleccionados} toggleSeleccion={toggleSeleccion}
+          />
+        </div>
+
+        {/* Bottom sheet panel */}
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[1000] flex flex-col transition-all duration-300 ease-in-out"
+          style={{ height: panelHeights[panelState] }}
+        >
+          {/* Drag handle */}
+          <button
+            onClick={cyclePanelState}
+            className="flex flex-col items-center pt-2 pb-1 w-full flex-shrink-0"
+            aria-label="Expandir o colapsar panel"
+          >
+            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            {panelState === 'collapsed' && (
+              <div className="flex items-center gap-2 mt-1 text-sm font-medium text-blue-600">
+                <span>🗺</span>
+                <span>{ruta ? `Ruta: ${ruta.resumen.lugares} lugares` : 'Planear ruta'}</span>
+                <span className="text-gray-400">↑</span>
+              </div>
+            )}
+          </button>
+
+          {/* Sidebar content inside the panel (only when not collapsed) */}
+          {panelState !== 'collapsed' && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <Sidebar {...sidebarProps} mobile />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -198,25 +263,32 @@ function haversine(a, b) {
   const R = 6371
   const dLat = ((b.lat - a.lat) * Math.PI) / 180
   const dLng = ((b.lng - a.lng) * Math.PI) / 180
-  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2
-  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h))
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+    Math.cos((b.lat * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
 }
 
-function construirRutaLocal(pool, tiempoMin, presupuesto, ubicacionInicial) {
+function construirRutaLocal(pool, tiempoMin, presupuesto, origen) {
   const seleccionados = []
-  let tr = tiempoMin, pr = presupuesto
-  let actual = ubicacionInicial || { lat: 19.4326, lng: -99.1332 }
+  let tiempoRestante = tiempoMin
+  let dineroRestante = presupuesto
+  let actual = origen ?? { lat: 19.4326, lng: -99.1332 }
   const disponibles = [...pool]
+
   while (disponibles.length > 0) {
-    const candidatos = disponibles
-      .filter(l => l.duracion <= tr && (l.costo === null || l.costo <= pr))
-      .map(l => ({ lugar: l, dist: haversine(actual, l) }))
-      .sort((a, b) => a.dist - b.dist)
-    if (!candidatos.length) break
-    const elegido = candidatos[0].lugar
+    const candidatos = disponibles.filter(
+      l => l.duracion <= tiempoRestante && (l.costo ?? 0) <= dineroRestante
+    )
+    if (candidatos.length === 0) break
+    candidatos.sort((a, b) => haversine(actual, a) - haversine(actual, b))
+    const elegido = candidatos[0]
     seleccionados.push(elegido)
-    tr -= elegido.duracion; pr -= elegido.costo
-    actual = { lat: elegido.lat, lng: elegido.lng }
+    tiempoRestante -= elegido.duracion
+    dineroRestante -= elegido.costo ?? 0
+    actual = elegido
     disponibles.splice(disponibles.indexOf(elegido), 1)
   }
   return seleccionados

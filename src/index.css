@@ -37,3 +37,18 @@ html, body, #root {
   background: #CBD5E0;
   border-radius: 4px;
 }
+
+/* Ocultar scrollbar horizontal en chips de categorías móvil */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Asegurar que el mapa de Leaflet no bloquee el panel inferior en móvil */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+}

@@ -11,6 +11,7 @@ export default function Sidebar({
   lugarActivo, setLugarActivo,
   onGenerarRuta, onLimpiarRuta,
   cargandoRuta, error, lugaresFiltrados,
+  mobile = false,
 }) {
   function toggleCategoria(cat) {
     setCategoriasActivas(prev =>
@@ -25,13 +26,17 @@ export default function Sidebar({
   const tipoTP = TIPOS_TRANSPORTE[modoTransporte]
   const esTP = tipoTP?.estaciones?.length > 0
 
+  const containerClass = mobile
+    ? 'flex flex-col h-full'
+    : 'w-80 bg-white border-r flex flex-col overflow-hidden shadow-sm'
+
   return (
-    <aside className="w-80 bg-white border-r flex flex-col overflow-hidden shadow-sm">
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+    <aside className={containerClass}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
         {/* ── Modo de ruta ── */}
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Modo</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Modo</h2>
           <div className="grid grid-cols-2 gap-2">
             {[['auto','🤖 Automático','blue'],['manual','✏️ Personalizado','indigo']].map(([m,label,c]) => (
               <button key={m} onClick={() => { setModoRuta(m); onLimpiarRuta() }}
@@ -49,12 +54,21 @@ export default function Sidebar({
         {modoRuta === 'auto' && (
           <>
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Categorías</h2>
-              <div className="space-y-1">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Categorías</h2>
+              {/* Mobile: horizontal scroll chips */}
+              <div className={mobile ? 'flex gap-2 overflow-x-auto pb-1 no-scrollbar' : 'space-y-1'}>
                 {Object.entries(categorias).map(([key, cat]) => {
                   const activa = categoriasActivas.includes(key)
                   const count  = lugaresFiltrados.filter(l => l.categoria === key).length
-                  return (
+                  return mobile ? (
+                    <button key={key} onClick={() => toggleCategoria(key)}
+                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all whitespace-nowrap
+                        ${activa ? `${cat.bg} ${cat.text} ${cat.border}` : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
+                      <span>{cat.emoji}</span>
+                      <span>{cat.label}</span>
+                      {activa && <span className="bg-white/60 rounded-full px-1">{count}</span>}
+                    </button>
+                  ) : (
                     <button key={key} onClick={() => toggleCategoria(key)}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-sm
                         ${activa ? `${cat.bg} ${cat.text} ${cat.border} font-medium` : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}>
@@ -69,7 +83,7 @@ export default function Sidebar({
             </section>
 
             <section>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Parámetros</h2>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Parámetros</h2>
               <div className="space-y-3">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">⏱ Horas disponibles: <strong>{horas}h</strong></label>
@@ -90,7 +104,7 @@ export default function Sidebar({
         {modoRuta === 'manual' && (
           <section>
             <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Elige tus lugares</h2>
-            <p className="text-xs text-gray-400 mb-3">Clic en el mapa o selecciona de la lista. Mínimo 2.</p>
+            <p className="text-xs text-gray-400 mb-3">Toca un marcador en el mapa o selecciona de la lista. Mínimo 2.</p>
             {lugaresSeleccionados.length > 0 && (
               <div className="mb-3 space-y-1">
                 <p className="text-xs font-medium text-indigo-600 mb-1">{lugaresSeleccionados.length} seleccionados:</p>
@@ -106,7 +120,7 @@ export default function Sidebar({
                 })}
               </div>
             )}
-            <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
               {lugaresFiltrados.map(lugar => {
                 const cat = categorias[lugar.categoria] ?? CATEGORIA_FALLBACK
                 const sel = lugaresSeleccionados.some(l => l.id === lugar.id)
@@ -129,7 +143,7 @@ export default function Sidebar({
 
         {/* ── Transporte ── */}
         <section>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Transporte</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Transporte</h2>
           <div className="grid grid-cols-2 gap-1.5">
             {Object.entries(TIPOS_TRANSPORTE).map(([key, tipo]) => (
               <button key={key} onClick={() => setModoTransporte(key)}
@@ -152,7 +166,7 @@ export default function Sidebar({
         {/* ── Resumen de ruta ── */}
         {ruta && (
           <section>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Tu Ruta</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Tu Ruta</h2>
             <div className="grid grid-cols-3 gap-2 mb-2">
               <div className="bg-blue-50 rounded-lg p-2 text-center">
                 <div className="text-lg font-bold text-blue-700">{ruta.resumen.lugares}</div>
@@ -166,11 +180,10 @@ export default function Sidebar({
               </div>
               <div className="bg-orange-50 rounded-lg p-2 text-center">
                 <div className="text-lg font-bold text-orange-700">${ruta.resumen.costoTotal}</div>
-                <div className="text-xs text-orange-500">Costo total</div>
+                <div className="text-xs text-orange-500">Costo</div>
               </div>
             </div>
 
-            {/* Desglose de costo */}
             {(ruta.resumen.costoTransporte > 0 || ruta.resumen.costoLugares > 0) && (
               <div className="mb-2 px-3 py-2 bg-orange-50 rounded-lg text-xs space-y-1">
                 {ruta.resumen.costoLugares > 0 && (
@@ -202,7 +215,6 @@ export default function Sidebar({
               </div>
             )}
 
-            {/* Segmentos de transporte público */}
             {rutaSegmentos && rutaSegmentos.length > 0 && (
               <div className="mb-3 space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cómo moverte</p>
@@ -252,10 +264,10 @@ export default function Sidebar({
           </section>
         )}
 
-        {/* ── Lista sin ruta (modo auto) ── */}
+        {/* ── Lista sin ruta ── */}
         {!ruta && modoRuta === 'auto' && (
           <section>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">{lugaresFiltrados.length} lugares en el mapa</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">{lugaresFiltrados.length} lugares en el mapa</h2>
             <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
               {lugaresFiltrados.map(lugar => {
                 const cat = categorias[lugar.categoria] ?? CATEGORIA_FALLBACK
@@ -278,15 +290,15 @@ export default function Sidebar({
       </div>
 
       {/* ── CTA ── */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 border-t bg-white flex-shrink-0">
         {ruta ? (
           <button onClick={onLimpiarRuta}
-            className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
+            className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
             ✕ Nueva búsqueda
           </button>
         ) : (
           <button onClick={onGenerarRuta} disabled={cargandoRuta || !puedeGenerar}
-            className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
             {cargandoRuta
               ? <><span className="animate-spin">⏳</span> Calculando…</>
               : modoRuta === 'manual'
