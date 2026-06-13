@@ -14,6 +14,7 @@ export default function Sidebar({
   guardarRutaActual,
   rutasGuardadas,
   abrirRutaGuardada,
+  eliminarRutaGuardada,
   mobile = false,
   hideCta = false,
 }) {
@@ -274,12 +275,19 @@ export default function Sidebar({
             <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">📂 Rutas Guardadas</h2>
             <div className="space-y-1">
               {rutasGuardadas.map(r => (
-                <button key={r.id} onClick={() => abrirRutaGuardada(r)}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm bg-gray-50 hover:bg-blue-50 border border-gray-100 hover:border-blue-200 transition">
-                  <span>📍</span>
-                  <span className="flex-1 truncate font-medium text-gray-700">{r.nombre}</span>
-                  <span className="text-xs text-gray-400">{r.resumen?.lugares} lugares</span>
-                </button>
+                <div key={r.id} className="flex items-center gap-1">
+                  <button onClick={() => abrirRutaGuardada(r)}
+                    className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm bg-gray-50 hover:bg-blue-50 border border-gray-100 hover:border-blue-200 transition">
+                    <span>📍</span>
+                    <span className="flex-1 truncate font-medium text-gray-700">{r.nombre}</span>
+                    <span className="text-xs text-gray-400">{r.resumen?.lugares} lugares</span>
+                  </button>
+                  <button onClick={() => eliminarRutaGuardada(r.id)}
+                    className="p-2 text-gray-300 hover:text-red-500 transition flex-shrink-0"
+                    title="Eliminar">
+                    🗑
+                  </button>
+                </div>
               ))}
             </div>
           </section>
@@ -332,13 +340,17 @@ export default function Sidebar({
             <div className="space-y-2">
 
           {rutasGuardadas.map(r => (
-            <button
-              key={r.id}
-              onClick={() => abrirRutaGuardada(r)}
-              className="w-full text-left p-2 border rounded-lg hover:bg-gray-50"
-            >
-            📍 {r.nombre}
-            </button>
+            <div key={r.id} className="flex items-center gap-1">
+              <button onClick={() => abrirRutaGuardada(r)}
+                className="flex-1 text-left p-2 border rounded-lg hover:bg-gray-50 text-sm">
+                📍 {r.nombre}
+              </button>
+              <button onClick={() => eliminarRutaGuardada(r.id)}
+                className="p-2 text-gray-300 hover:text-red-500 transition flex-shrink-0"
+                title="Eliminar">
+                🗑
+              </button>
+            </div>
           ))}
 
         </div>

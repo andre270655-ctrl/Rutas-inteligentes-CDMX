@@ -6,7 +6,7 @@ import { TIPOS_TRANSPORTE, COSTOS_TRANSPORTE } from './data/transporte'
 import { obtenerLugares } from './services/lugares'
 import { construirRutaTP } from './services/transporte'
 import useLocation from './hooks/useLocation'
-import {guardarRuta,obtenerRutas} from './services/rutasGuardadas'
+import {guardarRuta, obtenerRutas, eliminarRuta} from './services/rutasGuardadas'
 
 async function fetchRutaOSRM(paradas, modo) {
   const perfil = modo === 'car' ? 'car' : 'foot'
@@ -157,28 +157,18 @@ export default function App() {
   }
 
   function guardarRutaActual() {
+    if (!ruta) return
+    const nombre = prompt('Nombre para esta ruta')
+    if (!nombre) return
+    guardarRuta(nombre, { ruta: ruta.ruta, resumen: ruta.resumen, rutaInfo, modoTransporte })
+    setRutasGuardadas(obtenerRutas())
+    alert('Ruta guardada correctamente')
+  }
 
-        if (!ruta) return
-
-        const nombre = prompt(
-          'Nombre para esta ruta'
-        )
-
-      if (!nombre) return
-
-      guardarRuta(nombre, {
-        ruta: ruta.ruta,
-        resumen: ruta.resumen,
-        rutaInfo,
-        modoTransporte
-      })
-
-      setRutasGuardadas(
-        obtenerRutas()
-      )
-
-      alert('Ruta guardada correctamente')
-    }
+  function eliminarRutaGuardada(id) {
+    eliminarRuta(id)
+    setRutasGuardadas(obtenerRutas())
+  }
 
     async function abrirRutaGuardada(rutaGuardada) {
 
@@ -229,6 +219,7 @@ export default function App() {
     guardarRutaActual,
     rutasGuardadas,
     abrirRutaGuardada,
+    eliminarRutaGuardada,
   }
 
   return (
