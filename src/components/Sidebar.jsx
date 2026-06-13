@@ -268,6 +268,23 @@ export default function Sidebar({
           </section>
         )}
 
+        {/* ── Rutas Guardadas (visible en móvil y desktop) ── */}
+        {!ruta && rutasGuardadas?.length > 0 && (
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">📂 Rutas Guardadas</h2>
+            <div className="space-y-1">
+              {rutasGuardadas.map(r => (
+                <button key={r.id} onClick={() => abrirRutaGuardada(r)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm bg-gray-50 hover:bg-blue-50 border border-gray-100 hover:border-blue-200 transition">
+                  <span>📍</span>
+                  <span className="flex-1 truncate font-medium text-gray-700">{r.nombre}</span>
+                  <span className="text-xs text-gray-400">{r.resumen?.lugares} lugares</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Lista sin ruta ── */}
         {!ruta && modoRuta === 'auto' && (
           <section>
