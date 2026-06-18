@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import 'leaflet-defaulticon-compatibility'
 import { CATEGORIA_FALLBACK } from '../data/lugares'
-import { TODAS_LINEAS } from '../data/transporte'
+import { TODAS_LINEAS, TIPOS_TRANSPORTE } from '../data/transporte'
 
 function FocusLugar({ lugar }) {
   const map = useMap()
@@ -50,8 +50,10 @@ function makeEstacionIcon(linea) {
   })
 }
 
+const COLOR_CAMINATA = '#16A34A' // verde — tramos a pie, detectados automáticamente
+
 export default function MapView({
-  lugares, categorias, ruta, rutaGeom, rutaSegmentos, modoTransporte,
+  lugares, categorias, ruta, rutaTramos,
   lugarActivo, setLugarActivo, userLocation,
   modoRuta, lugaresSeleccionados, toggleSeleccion,
 }) {
@@ -71,32 +73,33 @@ export default function MapView({
         </CircleMarker>
       )}
 
-      {/* Ruta OSRM (a pie / coche) */}
-      {rutaGeom && rutaGeom.length > 1 && (
-        <Polyline positions={rutaGeom}
-          pathOptions={{ color: modoTransporte === 'car' ? '#1D4ED8' : '#16A34A', weight: 5, opacity: 0.85 }} />
-      )}
+      {/* Tramos de la ruta — el modo de transporte se decidió automáticamente por tramo */}
+      {rutaTramos && rutaTramos.map((tramo, i) => {
+        // Tramo a pie: línea verde simple
+        if (tramo.modo === 'foot' || !tramo.detalle) {
+          return (
+            <Polyline key={i} positions={tramo.geom}
+              pathOptions={{ color: COLOR_CAMINATA, weight: 5, opacity: 0.85 }} />
+          )
+        }
 
-      {/* Ruta de transporte público — segmentos con colores de línea */}
-      {rutaSegmentos && rutaSegmentos.map((seg, i) => {
-        const color = TODAS_LINEAS[seg.estOrigen.linea]?.color ?? '#666'
+        // Tramo en transporte público: caminata + línea con color oficial + caminata
+        const { estOrigen, estDestino, geomCaminata1, geomTransporte, geomCaminata2 } = tramo.detalle
+        const color = TODAS_LINEAS[estOrigen.linea]?.color ?? '#666'
+
         return (
           <span key={i}>
-            {/* Caminata 1 → estación origen */}
-            <Polyline positions={seg.geomCaminata1}
+            <Polyline positions={geomCaminata1}
               pathOptions={{ color: '#9CA3AF', weight: 3, opacity: 0.7, dashArray: '6 4' }} />
-            {/* Segmento en transporte */}
-            <Polyline positions={seg.geomTransporte}
-              pathOptions={{ color, weight: 5, opacity: 0.9 }} />
-            {/* Caminata 2 → destino */}
-            <Polyline positions={seg.geomCaminata2}
+            <Polyline positions={geomTransporte}
+              pathOptions={{ color, weight: 6, opacity: 0.95 }} />
+            <Polyline positions={geomCaminata2}
               pathOptions={{ color: '#9CA3AF', weight: 3, opacity: 0.7, dashArray: '6 4' }} />
-            {/* Marcadores de estaciones */}
-            <Marker position={[seg.estOrigen.lat, seg.estOrigen.lng]} icon={makeEstacionIcon(seg.estOrigen.linea)}>
-              <Popup><b>{seg.estOrigen.nombre}</b><br/><small>{TODAS_LINEAS[seg.estOrigen.linea]?.nombre}</small></Popup>
+            <Marker position={[estOrigen.lat, estOrigen.lng]} icon={makeEstacionIcon(estOrigen.linea)}>
+              <Popup><b>{estOrigen.nombre}</b><br/><small>{TODAS_LINEAS[estOrigen.linea]?.nombre}</small></Popup>
             </Marker>
-            <Marker position={[seg.estDestino.lat, seg.estDestino.lng]} icon={makeEstacionIcon(seg.estDestino.linea)}>
-              <Popup><b>{seg.estDestino.nombre}</b><br/><small>{TODAS_LINEAS[seg.estDestino.linea]?.nombre}</small></Popup>
+            <Marker position={[estDestino.lat, estDestino.lng]} icon={makeEstacionIcon(estDestino.linea)}>
+              <Popup><b>{estDestino.nombre}</b><br/><small>{TODAS_LINEAS[estDestino.linea]?.nombre}</small></Popup>
             </Marker>
           </span>
         )

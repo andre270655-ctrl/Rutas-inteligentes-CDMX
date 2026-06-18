@@ -2,43 +2,23 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import { lugares as fallbackLugares, CATEGORIAS, CATEGORIA_FALLBACK } from './data/lugares'
-import { TIPOS_TRANSPORTE, COSTOS_TRANSPORTE } from './data/transporte'
+import { COSTOS_TRANSPORTE } from './data/transporte'
 import { obtenerLugares } from './services/lugares'
-import { construirRutaTP } from './services/transporte'
+import { construirRutaAutomatica } from './services/transporte'
 import useLocation from './hooks/useLocation'
-import {guardarRuta, obtenerRutas, eliminarRuta} from './services/rutasGuardadas'
-
-async function fetchRutaOSRM(paradas, modo) {
-  const perfil = modo === 'car' ? 'car' : 'foot'
-  const coords = paradas.map(p => `${p.lng},${p.lat}`).join(';')
-  const url = `https://router.project-osrm.org/route/v1/${perfil}/${coords}?overview=full&geometries=geojson&steps=false`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('OSRM no disponible')
-  const data = await res.json()
-  if (data.code !== 'Ok') throw new Error('Sin ruta disponible')
-  return {
-    geom: data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-    distanciaKm: (data.routes[0].distance / 1000).toFixed(1),
-    duracionMin: Math.ceil(data.routes[0].duration / 60),
-  }
-}
 
 export default function App() {
   const userLocation = useLocation()
-
-  const [rutasGuardadas, setRutasGuardadas] = useState([])
 
   const [allLugares, setAllLugares]     = useState(fallbackLugares)
   const [categoriasActivas, setCategoriasActivas] = useState(Object.keys(CATEGORIAS))
   const [horas, setHoras]               = useState(4)
   const [presupuesto, setPresupuesto]   = useState(500)
-  const [modoTransporte, setModoTransporte] = useState('foot')
   const [modoRuta, setModoRuta]         = useState('auto')
   const [lugaresSeleccionados, setLugaresSeleccionados] = useState([])
 
   const [ruta, setRuta]             = useState(null)
-  const [rutaGeom, setRutaGeom]     = useState(null)
-  const [rutaSegmentos, setRutaSegmentos] = useState(null)
+  const [rutaTramos, setRutaTramos] = useState(null)   // tramos con modo de transporte decidido automáticamente
   const [rutaInfo, setRutaInfo]     = useState(null)
   const [cargandoRuta, setCargandoRuta] = useState(false)
   const [error, setError]           = useState(null)
@@ -47,11 +27,6 @@ export default function App() {
 
   // Mobile panel state: 'collapsed' | 'half' | 'full'
   const [panelState, setPanelState] = useState('half')
-
-  useEffect(() => {
-  const rutas = obtenerRutas()
-  setRutasGuardadas(rutas)
-}, [])
 
   useEffect(() => {
     async function cargarLugares() {
@@ -67,40 +42,6 @@ export default function App() {
     }
     cargarLugares()
   }, [])
-
-  useEffect(() => {
-    if (ruta?.ruta?.length > 1) calcularGeometria(ruta.ruta, modoTransporte)
-  }, [modoTransporte])
-
-  async function calcularGeometria(paradasRuta, modo) {
-    const tipo = TIPOS_TRANSPORTE[modo]
-    const puntosConOrigen = userLocation
-      ? [{ lat: userLocation.lat, lng: userLocation.lng }, ...paradasRuta]
-      : paradasRuta
-
-    if (tipo?.estaciones?.length > 0) {
-      try {
-        const resultado = await construirRutaTP(puntosConOrigen, tipo.estaciones)
-        setRutaSegmentos(resultado.segmentos)
-        setRutaGeom(null)
-        setRutaInfo({ distanciaKm: resultado.distanciaTotal, duracionMin: resultado.duracionTotal })
-      } catch {
-        setRutaSegmentos(null)
-        setRutaGeom(puntosConOrigen.map(p => [p.lat, p.lng]))
-      }
-
-      return
-    }
-
-    setRutaSegmentos(null)
-    try {
-      const { geom, distanciaKm, duracionMin } = await fetchRutaOSRM(puntosConOrigen, modo)
-      setRutaGeom(geom)
-      setRutaInfo({ distanciaKm, duracionMin })
-    } catch {
-      setRutaGeom(puntosConOrigen.map(p => [p.lat, p.lng]))
-    }
-  }
 
   const categoriasConocidas = Object.keys(CATEGORIAS)
   const lugaresFiltrados = allLugares.filter(l =>
@@ -121,7 +62,7 @@ export default function App() {
 
     setError(null)
     setCargandoRuta(true)
-    setRuta(null); setRutaGeom(null); setRutaSegmentos(null); setRutaInfo(null)
+    setRuta(null); setRutaTramos(null); setRutaInfo(null)
 
     try {
       const rutaLocal = modoRuta === 'manual'
@@ -129,7 +70,22 @@ export default function App() {
         : construirRutaLocal(pool, horas * 60, presupuesto, userLocation)
 
       const costoLugares = rutaLocal.reduce((s, l) => s + (l.costo ?? 0), 0)
-      const costoTransporte = COSTOS_TRANSPORTE[modoTransporte] ?? 0
+
+      // Paradas incluyendo el origen (ubicación del usuario) si está disponible
+      const puntosRuta = userLocation
+        ? [{ lat: userLocation.lat, lng: userLocation.lng }, ...rutaLocal]
+        : rutaLocal
+
+      // Decide automáticamente el mejor transporte para cada tramo
+      const resultadoTransporte = puntosRuta.length > 1
+        ? await construirRutaAutomatica(puntosRuta)
+        : { tramos: [], duracionTotal: 0, distanciaTotal: '0.0', modosUsados: [] }
+
+      // Costo de transporte: una sola vez por cada modo público distinto usado
+      const costoTransporte = resultadoTransporte.modosUsados.reduce(
+        (s, modo) => s + (COSTOS_TRANSPORTE[modo] ?? 0), 0
+      )
+
       const nuevaRuta = {
         ruta: rutaLocal,
         resumen: {
@@ -140,9 +96,13 @@ export default function App() {
           costoTransporte,
         },
       }
+
       setRuta(nuevaRuta)
-      await calcularGeometria(rutaLocal, modoTransporte)
-      // When route is generated on mobile, expand the panel to show results
+      setRutaTramos(resultadoTransporte.tramos)
+      setRutaInfo({
+        distanciaKm: resultadoTransporte.distanciaTotal,
+        duracionMin: resultadoTransporte.duracionTotal,
+      })
       setPanelState('half')
     } catch (e) {
       setError(e.message || 'Error al generar la ruta.')
@@ -152,47 +112,14 @@ export default function App() {
   }
 
   function limpiarRuta() {
-    setRuta(null); setRutaGeom(null); setRutaSegmentos(null); setRutaInfo(null)
+    setRuta(null); setRutaTramos(null); setRutaInfo(null)
     setLugarActivo(null); setLugaresSeleccionados([])
-  }
-
-  function guardarRutaActual() {
-    if (!ruta) return
-    const nombre = prompt('Nombre para esta ruta')
-    if (!nombre) return
-    guardarRuta(nombre, { ruta: ruta.ruta, resumen: ruta.resumen, rutaInfo, modoTransporte })
-    setRutasGuardadas(obtenerRutas())
-    alert('Ruta guardada correctamente')
-  }
-
-  function eliminarRutaGuardada(id) {
-    eliminarRuta(id)
-    setRutasGuardadas(obtenerRutas())
-  }
-
-    async function abrirRutaGuardada(rutaGuardada) {
-
-      setRuta({
-      ruta: rutaGuardada.ruta,
-      resumen: rutaGuardada.resumen
-      })
-
-    setRutaInfo(
-      rutaGuardada.rutaInfo || null
-    )
-
-    setLugarActivo(null)
-
-    calcularGeometria(
-      rutaGuardada.ruta,
-      rutaGuardada.modoTransporte || modoTransporte
-    )
   }
 
   // Panel height map for mobile
   const panelHeights = {
-    collapsed: '140px',
-    half: '60vh',
+    collapsed: '90px',
+    half: '52vh',
     full: '92vh',
   }
 
@@ -207,19 +134,14 @@ export default function App() {
     categoriasActivas, setCategoriasActivas,
     horas, setHoras,
     presupuesto, setPresupuesto,
-    modoTransporte, setModoTransporte,
     modoRuta, setModoRuta,
     lugaresSeleccionados, toggleSeleccion,
-    ruta, rutaInfo, rutaSegmentos,
+    ruta, rutaInfo, rutaTramos,
     lugarActivo, setLugarActivo,
     onGenerarRuta: generarRuta,
     onLimpiarRuta: limpiarRuta,
     cargandoRuta, error,
     lugaresFiltrados,
-    guardarRutaActual,
-    rutasGuardadas,
-    abrirRutaGuardada,
-    eliminarRutaGuardada,
   }
 
   return (
@@ -246,8 +168,7 @@ export default function App() {
           <MapView
             lugares={lugaresParaMostrar}
             categorias={CATEGORIAS}
-            ruta={ruta} rutaGeom={rutaGeom} rutaSegmentos={rutaSegmentos}
-            modoTransporte={modoTransporte}
+            ruta={ruta} rutaTramos={rutaTramos}
             lugarActivo={lugarActivo} setLugarActivo={setLugarActivo}
             userLocation={userLocation}
             modoRuta={modoRuta}
@@ -258,13 +179,11 @@ export default function App() {
 
       {/* ── MOBILE layout ── */}
       <div className="flex md:hidden flex-1 relative overflow-hidden">
-        {/* Map fills the screen */}
         <div className="absolute inset-0">
           <MapView
             lugares={lugaresParaMostrar}
             categorias={CATEGORIAS}
-            ruta={ruta} rutaGeom={rutaGeom} rutaSegmentos={rutaSegmentos}
-            modoTransporte={modoTransporte}
+            ruta={ruta} rutaTramos={rutaTramos}
             lugarActivo={lugarActivo} setLugarActivo={setLugarActivo}
             userLocation={userLocation}
             modoRuta={modoRuta}
@@ -272,12 +191,10 @@ export default function App() {
           />
         </div>
 
-        {/* Bottom sheet panel */}
         <div
           className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[1000] transition-all duration-300 ease-in-out"
           style={{ height: panelHeights[panelState] }}
         >
-          {/* Drag handle */}
           <button
             onClick={cyclePanelState}
             className="flex justify-center pt-2 pb-1 w-full"
@@ -286,19 +203,12 @@ export default function App() {
             <div className="w-10 h-1 bg-gray-300 rounded-full" />
           </button>
 
-          {/* Botón FIJO al fondo - posición absoluta dentro del panel */}
           <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-white border-t z-10">
             {ruta ? (
-              <div className="flex gap-2">
-                <button onClick={guardarRutaActual}
-                  className="flex-1 py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition">
-                  💾 Guardar
-                </button>
-                <button onClick={limpiarRuta}
-                  className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
-                  ✕ Nueva
-                </button>
-              </div>
+              <button onClick={limpiarRuta}
+                className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
+                ✕ Nueva búsqueda
+              </button>
             ) : (
               <button
                 onClick={generarRuta}
@@ -313,13 +223,11 @@ export default function App() {
             )}
           </div>
 
-          {/* Contenido scrolleable con padding inferior para no tapar el botón */}
           {panelState !== 'collapsed' && (
             <div className="overflow-y-auto" style={{ height: 'calc(100% - 32px - 72px)' }}>
               <Sidebar {...sidebarProps} mobile hideCta />
             </div>
           )}
-
         </div>
       </div>
     </div>

@@ -4,17 +4,12 @@ import { TIPOS_TRANSPORTE } from '../data/transporte'
 export default function Sidebar({
   categorias, categoriasActivas, setCategoriasActivas,
   horas, setHoras, presupuesto, setPresupuesto,
-  modoTransporte, setModoTransporte,
   modoRuta, setModoRuta,
   lugaresSeleccionados, toggleSeleccion,
-  ruta, rutaInfo, rutaSegmentos,
+  ruta, rutaInfo, rutaTramos,
   lugarActivo, setLugarActivo,
   onGenerarRuta, onLimpiarRuta,
   cargandoRuta, error, lugaresFiltrados,
-  guardarRutaActual,
-  rutasGuardadas,
-  abrirRutaGuardada,
-  eliminarRutaGuardada,
   mobile = false,
   hideCta = false,
 }) {
@@ -27,9 +22,6 @@ export default function Sidebar({
   const puedeGenerar = modoRuta === 'auto'
     ? categoriasActivas.length > 0
     : lugaresSeleccionados.length >= 2
-
-  const tipoTP = TIPOS_TRANSPORTE[modoTransporte]
-  const esTP = tipoTP?.estaciones?.length > 0
 
   const containerClass = mobile
     ? 'flex flex-col h-full'
@@ -60,7 +52,6 @@ export default function Sidebar({
           <>
             <section>
               <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Categorías</h2>
-              {/* Mobile: horizontal scroll chips */}
               <div className={mobile ? 'flex gap-2 overflow-x-auto pb-1 no-scrollbar' : 'space-y-1'}>
                 {Object.entries(categorias).map(([key, cat]) => {
                   const activa = categoriasActivas.includes(key)
@@ -146,23 +137,6 @@ export default function Sidebar({
           </section>
         )}
 
-        {/* ── Transporte ── */}
-        <section>
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Transporte</h2>
-          <div className="grid grid-cols-2 gap-1.5">
-            {Object.entries(TIPOS_TRANSPORTE).map(([key, tipo]) => (
-              <button key={key} onClick={() => setModoTransporte(key)}
-                className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-xs font-medium transition-all
-                  ${modoTransporte === key
-                    ? 'bg-blue-50 text-blue-700 border-blue-300'
-                    : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100'}`}>
-                <span>{tipo.emoji}</span>
-                <span>{tipo.label}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
         {/* ── Error ── */}
         {error && (
           <div className="bg-red-50 text-red-700 text-sm px-3 py-2 rounded-lg border border-red-200">⚠️ {error}</div>
@@ -199,7 +173,7 @@ export default function Sidebar({
                 )}
                 {ruta.resumen.costoTransporte > 0 && (
                   <div className="flex justify-between text-orange-700">
-                    <span>{TIPOS_TRANSPORTE[modoTransporte]?.emoji} Transporte</span>
+                    <span>🚇 Transporte</span>
                     <span className="font-medium">${ruta.resumen.costoTransporte}</span>
                   </div>
                 )}
@@ -213,39 +187,60 @@ export default function Sidebar({
 
             {rutaInfo && (
               <div className="flex gap-2 mb-3 px-3 py-2 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">
-                <span>{TIPOS_TRANSPORTE[modoTransporte]?.emoji}</span>
+                <span>🧭</span>
                 <span>{rutaInfo.distanciaKm} km</span>
                 <span>·</span>
                 <span>~{rutaInfo.duracionMin} min en traslados</span>
               </div>
             )}
 
-            {rutaSegmentos && rutaSegmentos.length > 0 && (
+            {/* Instrucciones paso a paso — transporte decidido automáticamente por tramo */}
+            {rutaTramos && rutaTramos.length > 0 && (
               <div className="mb-3 space-y-2">
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cómo moverte</p>
-                {rutaSegmentos.map((seg, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs space-y-1">
-                    <div className="flex items-center gap-1">
-                      <span>🚶</span>
-                      <span className="text-gray-600">Camina {seg.durCaminata1} min a</span>
-                      <span className="font-medium text-gray-800">{seg.estOrigen.nombre}</span>
+                {rutaTramos.map((tramo, i) => {
+                  // Tramo a pie completo
+                  if (tramo.modo === 'foot' || !tramo.detalle) {
+                    return (
+                      <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          <span>🚶</span>
+                          <span className="text-gray-600">Camina {tramo.duracionMin} min</span>
+                          <span className="text-gray-400">({tramo.distanciaKm} km)</span>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Tramo en transporte público
+                  const { estOrigen, estDestino, lineaOrigen, durCaminata1, durTransporte, durCaminata2 } = tramo.detalle
+                  const tipoLabel = TIPOS_TRANSPORTE[tramo.modo]?.label ?? 'Transporte'
+                  const tipoEmoji = TIPOS_TRANSPORTE[tramo.modo]?.emoji ?? '🚆'
+                  return (
+                    <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span>🚶</span>
+                        <span className="text-gray-600">Camina {durCaminata1} min a</span>
+                        <span className="font-medium text-gray-800">{estOrigen.nombre}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>{tipoEmoji}</span>
+                        <span
+                          className="px-1.5 py-0.5 rounded text-white text-[10px] font-bold"
+                          style={{ background: lineaOrigen?.color ?? '#666' }}>
+                          {estOrigen.linea}
+                        </span>
+                        <span className="text-gray-600">{tipoLabel} hasta</span>
+                        <span className="font-medium text-gray-800">{estDestino.nombre}</span>
+                        <span className="text-gray-400">~{durTransporte} min</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>🚶</span>
+                        <span className="text-gray-600">Camina {durCaminata2} min al destino</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span
-                        className="px-1.5 py-0.5 rounded text-white text-[10px] font-bold"
-                        style={{ background: seg.lineaOrigen?.color ?? '#666' }}>
-                        {seg.estOrigen.linea}
-                      </span>
-                      <span className="text-gray-600">hasta</span>
-                      <span className="font-medium text-gray-800">{seg.estDestino.nombre}</span>
-                      <span className="text-gray-400">~{seg.durTransporte} min</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span>🚶</span>
-                      <span className="text-gray-600">Camina {seg.durCaminata2} min al destino</span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
@@ -266,30 +261,6 @@ export default function Sidebar({
                 )
               })}
             </ol>
-          </section>
-        )}
-
-        {/* ── Rutas Guardadas (visible en móvil y desktop) ── */}
-        {!ruta && rutasGuardadas?.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">📂 Rutas Guardadas</h2>
-            <div className="space-y-1">
-              {rutasGuardadas.map(r => (
-                <div key={r.id} className="flex items-center gap-1">
-                  <button onClick={() => abrirRutaGuardada(r)}
-                    className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm bg-gray-50 hover:bg-blue-50 border border-gray-100 hover:border-blue-200 transition">
-                    <span>📍</span>
-                    <span className="flex-1 truncate font-medium text-gray-700">{r.nombre}</span>
-                    <span className="text-xs text-gray-400">{r.resumen?.lugares} lugares</span>
-                  </button>
-                  <button onClick={() => eliminarRutaGuardada(r.id)}
-                    className="p-2 text-gray-300 hover:text-red-500 transition flex-shrink-0"
-                    title="Eliminar">
-                    🗑
-                  </button>
-                </div>
-              ))}
-            </div>
           </section>
         )}
 
@@ -322,62 +293,20 @@ export default function Sidebar({
       {!hideCta && (
       <div className="p-4 border-t bg-white flex-shrink-0">
         {ruta ? (
-          <div className="space-y-2">
-
-          <button
-            onClick={guardarRutaActual}
-            className="w-full py-3 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
-          >
-          💾 Guardar Ruta
+          <button onClick={onLimpiarRuta}
+            className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition">
+            ✕ Nueva búsqueda
           </button>
-          {rutasGuardadas?.length > 0 && (
-            <div className="mt-4">
-
-            <h3 className="font-bold text-sm mb-2">
-              📂 Rutas Guardadas
-            </h3>
-
-            <div className="space-y-2">
-
-          {rutasGuardadas.map(r => (
-            <div key={r.id} className="flex items-center gap-1">
-              <button onClick={() => abrirRutaGuardada(r)}
-                className="flex-1 text-left p-2 border rounded-lg hover:bg-gray-50 text-sm">
-                📍 {r.nombre}
-              </button>
-              <button onClick={() => eliminarRutaGuardada(r.id)}
-                className="p-2 text-gray-300 hover:text-red-500 transition flex-shrink-0"
-                title="Eliminar">
-                🗑
-              </button>
-            </div>
-          ))}
-
-        </div>
-
-      </div>
-    )}
-          <button
-            onClick={onLimpiarRuta}
-            className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition"
-          >
-          ✕ Nueva búsqueda
-          </button>
-
-          </div>
         ) : (
-        <button
-          onClick={onGenerarRuta}
-          disabled={cargandoRuta || !puedeGenerar}
-          className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-        >
-        {cargandoRuta
-        ? <><span className="animate-spin">⏳</span> Calculando…</>
-        : modoRuta === 'manual'
-        ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
-        : '🗺 Generar Ruta'}
-        </button>
-      )}
+          <button onClick={onGenerarRuta} disabled={cargandoRuta || !puedeGenerar}
+            className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+            {cargandoRuta
+              ? <><span className="animate-spin">⏳</span> Calculando…</>
+              : modoRuta === 'manual'
+                ? `🗺 Generar con ${lugaresSeleccionados.length} lugar${lugaresSeleccionados.length !== 1 ? 'es' : ''}`
+                : '🗺 Generar Ruta'}
+          </button>
+        )}
       </div>
       )}
     </aside>
